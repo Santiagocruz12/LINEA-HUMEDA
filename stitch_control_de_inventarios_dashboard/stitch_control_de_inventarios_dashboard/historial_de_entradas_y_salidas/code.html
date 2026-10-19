@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <meta content="web_dashboard" name="shell-type"/>
+  <title>Consolidado de Salidas - Línea Húmeda</title>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    @layer base {
+      html, body { margin: 0; padding: 0; }
+      body { overscroll-behavior: none; }
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #c6c6cd; border-radius: 9999px; }
+  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface": "#f8f9ff",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#eff4ff",
+            "surface-container": "#e5eeff",
+            "surface-container-high": "#dce9ff",
+            "on-surface": "#0b1c30",
+            "on-surface-variant": "#45464d",
+            "outline": "#76777d",
+            "outline-variant": "#c6c6cd",
+            "primary": "#000000",
+            "on-primary": "#ffffff",
+            "secondary": "#0051d5",
+            "error": "#ba1a1a",
+            "error-container": "#ffdad6"
+          },
+          fontFamily: {
+            "body": ["Hanken Grotesk", "sans-serif"],
+            "mono": ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased">
+  <!-- SIDEBAR -->
+  <aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-50 flex flex-col justify-between">
+    <div class="flex flex-col">
+      <a href="../dashboard_principal_de_inventario/code.html" class="h-16 px-6 flex items-center gap-3 hover:opacity-90 transition-opacity">
+        <div class="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center font-bold">
+          <span class="material-symbols-outlined text-[20px]">water_drop</span>
+        </div>
+        <span class="font-bold text-base tracking-tight text-on-surface">LÍNEA HÚMEDA</span>
+      </a>
+      <div class="px-4 py-2">
+        <div class="text-[10px] font-mono text-outline uppercase px-2 mb-1">Operaciones</div>
+        <nav class="flex flex-col gap-1">
+          <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors text-sm" href="../dashboard_principal_de_inventario/code.html">
+            <span class="material-symbols-outlined text-[20px]">grid_view</span>
+            <span>Dashboard</span>
+          </a>
+          <a aria-current="page" class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors bg-primary text-on-primary font-semibold shadow-sm text-sm" href="code.html">
+            <span class="material-symbols-outlined text-[20px]">sync_alt</span>
+            <span>Movimientos &amp; Consolidado</span>
+          </a>
+          <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors text-sm" href="../registrar_salida_de_inventario/code.html">
+            <span class="material-symbols-outlined text-[20px]">output</span>
+            <span>Registrar Salida</span>
+          </a>
+          <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors text-sm" href="../cat_logo_de_stock_y_existencias/code.html">
+            <span class="material-symbols-outlined text-[20px]">inventory_2</span>
+            <span>Catálogo de Stock</span>
+          </a>
+        </nav>
+      </div>
+      <div class="px-4 py-2">
+        <div class="text-[10px] font-mono text-outline uppercase px-2 mb-1">Gestión Rápida</div>
+        <nav class="flex flex-col gap-1">
+          <button onclick="openNewRefModal()" class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary hover:bg-surface-container transition-colors text-sm text-left w-full font-semibold">
+            <span class="material-symbols-outlined text-[20px]">add_box</span>
+            <span>+ Nueva Referencia</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+    <div class="p-4">
+      <div class="bg-surface-container-low rounded-xl p-3 flex flex-col gap-1 text-xs">
+        <div class="flex items-center justify-between">
+          <span class="font-mono text-[10px] text-outline uppercase">Módulo</span>
+          <span class="h-2 w-2 rounded-full bg-secondary"></span>
+        </div>
+        <span class="font-semibold text-on-surface">Consolidado Central</span>
+        <span class="text-outline text-[11px]">Técnicos: Johan &amp; Santiago</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN WRAPPER -->
+  <div class="pl-64">
+    <!-- TOP HEADER -->
+    <header class="fixed top-0 left-64 right-0 h-16 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 px-6 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3 flex-1 max-w-xl">
+        <div class="relative w-full">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">search</span>
+          <input class="w-full h-10 pl-10 pr-4 bg-surface-container-lowest rounded-lg text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-secondary/40 shadow-sm font-mono" placeholder="Buscar por serial, número de documento o referencia..." type="text" id="topSearchInput"/>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-1.5 bg-surface-container-low px-3 py-1.5 rounded-lg text-xs font-semibold">
+          <span class="material-symbols-outlined text-outline text-[18px]">warehouse</span>
+          <span>Bodega Central - Línea Húmeda</span>
+        </div>
+        <div class="flex items-center gap-2 pl-2">
+          <div class="flex flex-col text-right hidden sm:flex">
+            <span class="text-xs font-semibold text-on-surface leading-tight">Santiago / Johan</span>
+            <span class="text-[10px] font-mono text-outline">Operadores de Despacho</span>
+          </div>
+          <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold font-mono">
+            LH
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="w-full pt-16 bg-surface min-h-screen">
+      <div class="p-6 flex flex-col gap-6">
+
+        <!-- BANNER BÁSICO Y SOBRIO -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-container-lowest p-5 rounded-xl shadow-sm border border-[#e5eeff]">
+          <div class="flex flex-col gap-1">
+            <div class="flex items-center gap-2.5 flex-wrap">
+              <h1 class="text-2xl font-bold text-on-surface tracking-tight">Consolidado de Salidas</h1>
+              <span class="bg-red-50 text-error font-mono text-xs px-2.5 py-0.5 rounded-md font-bold border border-red-200">LÍNEA HÚMEDA</span>
+            </div>
+            <p class="text-xs text-outline font-mono">Historial de despachos por documento, ítem, serial y técnico (Johan / Santiago)</p>
+          </div>
+          <div class="flex items-center gap-2.5 flex-wrap shrink-0">
+            <button onclick="exportConsolidatedExcel()" class="inline-flex items-center gap-1.5 px-3.5 h-10 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold transition-colors shadow-sm active:scale-95">
+              <span class="material-symbols-outlined text-[18px]">download</span>
+              <span>Descargar Excel (.xlsx)</span>
+            </button>
+            <button onclick="openNewRefModal()" class="inline-flex items-center gap-1.5 px-3.5 h-10 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-colors">
+              <span class="material-symbols-outlined text-[18px]">add</span>
+              <span>+ Nueva Referencia</span>
+            </button>
+            <a href="../registrar_salida_de_inventario/code.html" class="inline-flex items-center gap-1.5 px-4 h-10 rounded-lg bg-error hover:bg-red-800 text-white text-xs font-semibold transition-colors shadow-sm">
+              <span class="material-symbols-outlined text-[18px]">output</span>
+              <span>Nueva Salida (Pistoleo)</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- 4 KPI CARDS DEL CONSOLIDADO -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <!-- Total Despachos -->
+          <div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm border border-[#e5eeff] flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-[10px] font-mono uppercase text-outline tracking-wider">Total Despachos Consolidado</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                  <span class="text-2xl font-bold font-mono text-on-surface" id="kpiTotalDispatches">0</span>
+                  <span class="text-xs text-outline">unidades / seriales</span>
+                </div>
+              </div>
+              <div class="w-10 h-10 rounded-lg bg-red-50 text-error flex items-center justify-center">
+                <span class="material-symbols-outlined text-[22px]">outbox</span>
+              </div>
+            </div>
+            <div class="mt-3 pt-2 border-t border-surface-container flex items-center justify-between text-xs">
+              <span class="text-outline">Trazabilidad por Serial</span>
+              <span class="font-mono font-bold text-error">100% Auditado</span>
+            </div>
+          </div>
+
+          <!-- Despachados por Johan -->
+          <div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm border border-[#e5eeff] flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-[10px] font-mono uppercase text-outline tracking-wider">Despachados por JOHAN</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                  <span class="text-2xl font-bold font-mono text-blue-700" id="kpiJohanCount">0</span>
+                  <span class="text-xs text-outline">unidades</span>
+                </div>
+              </div>
+              <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center font-bold font-mono">
+                J
+              </div>
+            </div>
+            <div class="mt-3 pt-2 border-t border-surface-container flex items-center justify-between text-xs">
+              <span class="text-outline">Participación</span>
+              <span class="font-mono font-bold text-blue-700" id="kpiJohanPct">0%</span>
+            </div>
+          </div>
+
+          <!-- Despachados por Santiago -->
+          <div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm border border-[#e5eeff] flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-[10px] font-mono uppercase text-outline tracking-wider">Despachados por SANTIAGO</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                  <span class="text-2xl font-bold font-mono text-emerald-700" id="kpiSantiagoCount">0</span>
+                  <span class="text-xs text-outline">unidades</span>
+                </div>
+              </div>
+              <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold font-mono">
+                S
+              </div>
+            </div>
+            <div class="mt-3 pt-2 border-t border-surface-container flex items-center justify-between text-xs">
+              <span class="text-outline">Participación</span>
+              <span class="font-mono font-bold text-emerald-700" id="kpiSantiagoPct">0%</span>
+            </div>
+          </div>
+
+          <!-- Referencias en Catálogo -->
+          <div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm border border-[#e5eeff] flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-[10px] font-mono uppercase text-outline tracking-wider">Referencias Línea Húmeda</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                  <span class="text-2xl font-bold font-mono text-on-surface" id="kpiTotalRefs">79</span>
+                  <span class="text-xs text-outline">códigos activos</span>
+                </div>
+              </div>
+              <div class="w-10 h-10 rounded-lg bg-surface-container text-on-surface flex items-center justify-center">
+                <span class="material-symbols-outlined text-[22px]">format_list_bulleted</span>
+              </div>
+            </div>
+            <div class="mt-3 pt-2 border-t border-surface-container flex items-center justify-between text-xs">
+              <span class="text-outline">Bombas, PTOs, Cilindros</span>
+              <a href="../cat_logo_de_stock_y_existencias/code.html" class="font-bold text-secondary hover:underline">Ver Catálogo</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- FILTROS Y BÚSQUEDA DEL CONSOLIDADO -->
+        <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-[#e5eeff] p-4 flex flex-col gap-3">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <!-- Tabs Filtro Técnico -->
+            <div class="flex items-center gap-1.5 p-1 bg-surface-container-low rounded-xl">
+              <button onclick="setTechnicianFilter('TODOS')" id="btnFilterTodos" class="px-3.5 py-1.5 rounded-lg bg-surface-container-lowest shadow-sm font-semibold text-xs text-on-surface flex items-center gap-1.5 transition-all">
+                <span>Todos</span>
+                <span id="badgeFilterTodos" class="bg-primary text-white px-1.5 py-0.2 rounded-full font-mono text-[10px]">0</span>
+              </button>
+              <button onclick="setTechnicianFilter('JOHAN')" id="btnFilterJohan" class="px-3.5 py-1.5 rounded-lg text-outline hover:text-on-surface font-semibold text-xs flex items-center gap-1.5 transition-all">
+                <span>Despachos JOHAN</span>
+                <span id="badgeFilterJohan" class="bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded-full font-mono text-[10px]">0</span>
+              </button>
+              <button onclick="setTechnicianFilter('SANTIAGO')" id="btnFilterSantiago" class="px-3.5 py-1.5 rounded-lg text-outline hover:text-on-surface font-semibold text-xs flex items-center gap-1.5 transition-all">
+                <span>Despachos SANTIAGO</span>
+                <span id="badgeFilterSantiago" class="bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded-full font-mono text-[10px]">0</span>
+              </button>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="flex items-center gap-2">
+              <button onclick="confirmClearAllDispatches()" class="h-9 px-3 bg-red-50 hover:bg-red-100 text-error text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors border border-red-200" title="Eliminar todos los registros del consolidado">
+                <span class="material-symbols-outlined text-[18px]">delete_sweep</span>
+                <span>Vaciar Consolidado</span>
+              </button>
+              <button onclick="exportConsolidatedCSV()" class="h-9 px-3 bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors">
+                <span class="material-symbols-outlined text-[18px]">table_view</span>
+                <span>Descargar CSV</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Búsqueda específica y filtros secundarios -->
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-3 pt-1">
+            <div class="md:col-span-8 relative">
+              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">search</span>
+              <input id="tableSearchInput" oninput="applyFilters()" class="w-full h-10 pl-10 pr-4 bg-surface-container-low rounded-lg font-mono text-xs text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-secondary/30 transition-all border border-transparent focus:border-secondary" placeholder="Filtrar por serial (ej. M1CS'RSK'50), documento (REM-8871) o referencia..."/>
+            </div>
+            <div class="md:col-span-4 flex items-center gap-2 bg-surface-container-low px-3 h-10 rounded-lg">
+              <span class="material-symbols-outlined text-outline text-[18px]">category</span>
+              <select id="filterFamilySelect" onchange="applyFilters()" class="bg-transparent text-xs font-semibold text-on-surface focus:outline-none cursor-pointer w-full">
+                <option value="TODAS">Todas las Familias Hidráulicas</option>
+                <option value="Bomba">Bombas Hidráulicas</option>
+                <option value="Toma de Fuerza">Tomas de Fuerza (PTO)</option>
+                <option value="Cilindro">Cilindros Telescópicos</option>
+                <option value="Válvula">Válvulas Neumáticas</option>
+                <option value="Winche">Winches de Arrastre</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- TABLA MAESTRA: CONSOLIDADO DE SALIDA -->
+        <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-[#e5eeff] overflow-hidden flex flex-col">
+          <div class="overflow-x-auto w-full">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-surface-container-low text-on-surface-variant font-mono uppercase text-[10px] tracking-wider border-b border-surface-container">
+                  <th class="py-3 px-4 font-semibold">Fecha por Defecto</th>
+                  <th class="py-3 px-4 font-semibold">Documento</th>
+                  <th class="py-3 px-4 font-semibold">Ítem / Referencia Base</th>
+                  <th class="py-3 px-4 font-semibold">Serial Pistoleado / Manual</th>
+                  <th class="py-3 px-4 font-semibold text-center">Despachado Por</th>
+                  <th class="py-3 px-4 font-semibold">Tipo / Familia</th>
+                  <th class="py-3 px-4 font-semibold text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="consolidatedTbody" class="divide-y divide-surface-container font-body">
+                <!-- Se inyecta dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Footer con métricas consolidadas -->
+          <div class="bg-surface-container-low/60 px-6 py-3 border-t border-surface-container flex flex-wrap items-center justify-between gap-4 text-xs">
+            <div class="flex items-center gap-2">
+              <span class="text-outline">Mostrando:</span>
+              <span class="font-mono font-bold text-on-surface" id="showingCount">0 registros</span>
+              <span class="text-outline text-[11px]">(Consolidado sincronizado en tiempo real)</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="window.print()" class="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-semibold flex items-center gap-1">
+                <span class="material-symbols-outlined text-[16px]">print</span>
+                <span>Imprimir Vista</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL: + AGREGAR REFERENCIA Y PROVEEDOR -->
+  <div id="newRefModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-surface-container-lowest rounded-xl max-w-md w-full p-6 shadow-xl border border-surface-container flex flex-col gap-4">
+      <div class="flex items-center justify-between border-b border-surface-container pb-3">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-secondary text-[22px]">add_box</span>
+          <h3 class="text-base font-bold text-on-surface">Nueva Referencia &amp; Proveedor</h3>
+        </div>
+        <button onclick="closeNewRefModal()" class="text-outline hover:text-on-surface">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <form id="newRefForm" onsubmit="handleCreateReference(event)" class="flex flex-col gap-3 text-xs">
+        <div class="flex flex-col gap-1">
+          <label class="font-semibold text-on-surface">Código de Referencia <span class="text-error">*</span></label>
+          <input id="modalRefCode" required placeholder="Ej: BOMBA&quot;ENG-C102-25-LAS-ET o PTO-ZF..." class="h-10 px-3 bg-surface-container-low rounded-lg font-mono text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-secondary/40 border border-transparent focus:border-secondary"/>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="font-semibold text-on-surface">Tipo / Familia Hidráulica <span class="text-error">*</span></label>
+          <select id="modalRefType" class="h-10 px-3 bg-surface-container-low rounded-lg font-semibold focus:outline-none focus:ring-2 focus:ring-secondary/40 border border-transparent focus:border-secondary">
+            <option value="Bomba Hidráulica (Engranajes)">Bomba Hidráulica (Engranajes)</option>
+            <option value="Bomba Hidráulica (Pistones)">Bomba Hidráulica (Pistones)</option>
+            <option value="Bomba Hidráulica (Paletas)">Bomba Hidráulica (Paletas)</option>
+            <option value="Toma de Fuerza (PTO)">Toma de Fuerza (PTO)</option>
+            <option value="Cilindro Telescópico Volco">Cilindro Telescópico Volco</option>
+            <option value="Válvula Neumática / Direccional">Válvula Neumática / Direccional</option>
+            <option value="Winche Hidráulico (Arrastre)">Winche Hidráulico (Arrastre)</option>
+            <option value="Kit Completo Línea Húmeda">Kit Completo Línea Húmeda</option>
+          </select>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="font-semibold text-on-surface">Proveedor / Fabricante <span class="text-error">*</span></label>
+          <input id="modalRefSupplier" required placeholder="Ej: HYVA, Parker, Chelsea, Permco, Aber, Vickers, ZF..." class="h-10 px-3 bg-surface-container-low rounded-lg font-semibold focus:outline-none focus:ring-2 focus:ring-secondary/40 border border-transparent focus:border-secondary"/>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="font-semibold text-on-surface">Serial Inicial para Inventario (Opcional)</label>
+          <input id="modalInitialSerial" placeholder="Ej: M1CS'RSK'50 020206 o código de fábrica" class="h-10 px-3 bg-surface-container-low rounded-lg font-mono text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-secondary/40 border border-transparent focus:border-secondary"/>
+          <span class="text-[10px] text-outline">Quedará disponible de inmediato para pistoleo o salida.</span>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-container">
+          <button type="button" onclick="closeNewRefModal()" class="px-3.5 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-semibold">Cancelar</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-primary hover:bg-black/80 text-white font-semibold">Guardar Referencia</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIRMACIÓN PARA ELIMINAR REGISTRO -->
+  <div id="modalConfirmDelete" class="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+    <div class="bg-surface-container-lowest rounded-2xl max-w-sm w-full p-6 shadow-xl border border-surface-container flex flex-col gap-4 text-center items-center">
+      <div class="w-12 h-12 rounded-full bg-red-100 text-error flex items-center justify-center">
+        <span class="material-symbols-outlined text-[28px]">warning</span>
+      </div>
+      <div class="flex flex-col gap-1">
+        <h3 id="deleteModalTitle" class="text-base font-bold text-on-surface">¿Eliminar este registro?</h3>
+        <p id="deleteModalDesc" class="text-xs text-on-surface-variant">¿Está seguro de que desea eliminar este movimiento del consolidado?</p>
+      </div>
+      <div id="deleteRecordDetails" class="bg-surface-container-low p-3 rounded-lg w-full text-xs font-mono text-left flex flex-col gap-1.5 border border-surface-container">
+        <!-- Detalles dinámicos -->
+      </div>
+      <div class="flex items-center gap-2 w-full pt-1">
+        <button type="button" onclick="closeDeleteModal()" class="flex-1 py-2 rounded-lg text-xs font-semibold text-on-surface-variant hover:bg-surface-container transition-colors">
+          Cancelar
+        </button>
+        <button id="btnConfirmDeleteAction" type="button" onclick="executeDeleteDispatch()" class="flex-1 py-2 rounded-lg bg-error hover:bg-red-800 text-white text-xs font-semibold transition-colors shadow-sm">
+          Sí, Eliminar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../wms_store.js"></script>
+  <script>
+    let activeTechFilter = 'TODOS';
+    let deleteTargetId = null;
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function confirmDeleteDispatch(id) {
+      deleteTargetId = id;
+      const all = WMSStore.getDispatches();
+      const disp = all.find(d => d.id === id);
+
+      document.getElementById('deleteModalTitle').textContent = '¿Eliminar este registro?';
+      document.getElementById('deleteModalDesc').textContent = '¿Está seguro de que desea eliminar este movimiento del consolidado? El serial volverá a quedar Disponible en bodega.';
+      document.getElementById('btnConfirmDeleteAction').textContent = 'Sí, Eliminar';
+
+      const detailsEl = document.getElementById('deleteRecordDetails');
+      if (disp) {
+        detailsEl.innerHTML = `
+          <div class="flex justify-between"><span class="text-outline">Documento:</span><span class="text-secondary font-bold font-mono">${escapeHtml(disp.document || '')}</span></div>
+          <div class="flex justify-between"><span class="text-outline">Serial:</span><span class="text-on-surface font-bold font-mono">${escapeHtml(disp.serial || '')}</span></div>
+          <div class="flex flex-col"><span class="text-outline">Referencia:</span><span class="text-on-surface font-semibold text-[11px] truncate">${escapeHtml(disp.ref || 'Sin especificar')}</span></div>
+        `;
+      } else {
+        detailsEl.innerHTML = `<span class="text-on-surface">Registro ID: ${escapeHtml(id)}</span>`;
+      }
+
+      const modal = document.getElementById('modalConfirmDelete');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function confirmClearAllDispatches() {
+      const all = WMSStore.getDispatches();
+      if (!all || all.length === 0) {
+        alert('No hay registros en el consolidado para eliminar.');
+        return;
+      }
+      deleteTargetId = '__ALL__';
+      document.getElementById('deleteModalTitle').textContent = '¿Eliminar TODOS los registros?';
+      document.getElementById('deleteModalDesc').textContent = `Se eliminarán permanentemente los ${all.length} registros del consolidado y sus seriales se restablecerán a "Disponible" en bodega.`;
+      document.getElementById('btnConfirmDeleteAction').textContent = 'Sí, Vaciar Todo';
+
+      const detailsEl = document.getElementById('deleteRecordDetails');
+      detailsEl.innerHTML = `
+        <div class="text-center text-error font-bold py-1">
+          ⚠️ Esta acción vaciará completamente el consolidado guardado (${all.length} registros).
+        </div>
+      `;
+
+      const modal = document.getElementById('modalConfirmDelete');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeDeleteModal() {
+      const modal = document.getElementById('modalConfirmDelete');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      deleteTargetId = null;
+    }
+
+    function executeDeleteDispatch() {
+      if (!deleteTargetId) return;
+      if (deleteTargetId === '__ALL__') {
+        WMSStore.clearAllDispatches();
+        closeDeleteModal();
+        initConsolidadoView();
+        return;
+      }
+      const success = WMSStore.deleteDispatch(deleteTargetId);
+      closeDeleteModal();
+      if (success) {
+        initConsolidadoView();
+      } else {
+        alert('No se pudo encontrar el registro para eliminar.');
+      }
+    }
+
+    function openNewRefModal() {
+      document.getElementById('newRefModal').classList.remove('hidden');
+      document.getElementById('modalRefCode').focus();
+    }
+
+    function closeNewRefModal() {
+      document.getElementById('newRefModal').classList.add('hidden');
+      document.getElementById('newRefForm').reset();
+    }
+
+    function handleCreateReference(e) {
+      e.preventDefault();
+      const ref = document.getElementById('modalRefCode').value.trim();
+      const type = document.getElementById('modalRefType').value;
+      const supplier = document.getElementById('modalRefSupplier').value.trim();
+      const initialSerial = document.getElementById('modalInitialSerial').value.trim();
+
+      if (!ref || !supplier) {
+        alert('Por favor complete la referencia y el proveedor.');
+        return;
+      }
+
+      WMSStore.addProduct(ref, type, supplier, initialSerial);
+      closeNewRefModal();
+      initConsolidadoView();
+      alert(`Referencia "${ref}" guardada exitosamente con proveedor ${supplier}.`);
+    }
+
+    function setTechnicianFilter(tech) {
+      activeTechFilter = tech;
+
+      const btnTodos = document.getElementById('btnFilterTodos');
+      const btnJohan = document.getElementById('btnFilterJohan');
+      const btnSantiago = document.getElementById('btnFilterSantiago');
+
+      [btnTodos, btnJohan, btnSantiago].forEach(b => {
+        b.className = 'px-3.5 py-1.5 rounded-lg text-outline hover:text-on-surface font-semibold text-xs flex items-center gap-1.5 transition-all';
+      });
+
+      if (tech === 'TODOS') {
+        btnTodos.className = 'px-3.5 py-1.5 rounded-lg bg-surface-container-lowest shadow-sm font-semibold text-xs text-on-surface flex items-center gap-1.5 transition-all';
+      } else if (tech === 'JOHAN') {
+        btnJohan.className = 'px-3.5 py-1.5 rounded-lg bg-blue-600 text-white shadow-sm font-semibold text-xs flex items-center gap-1.5 transition-all';
+      } else if (tech === 'SANTIAGO') {
+        btnSantiago.className = 'px-3.5 py-1.5 rounded-lg bg-emerald-600 text-white shadow-sm font-semibold text-xs flex items-center gap-1.5 transition-all';
+      }
+
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const search = (document.getElementById('tableSearchInput').value || '').toLowerCase().trim();
+      const family = document.getElementById('filterFamilySelect').value;
+      const allDispatches = WMSStore.getDispatches();
+
+      const filtered = allDispatches.filter(disp => {
+        // Tech filter
+        if (activeTechFilter !== 'TODOS' && disp.technician !== activeTechFilter) {
+          return false;
+        }
+
+        // Family filter
+        if (family !== 'TODAS' && (!disp.type || !disp.type.toLowerCase().includes(family.toLowerCase()))) {
+          return false;
+        }
+
+        // Search text filter
+        if (search) {
+          const matchDoc = disp.document && disp.document.toLowerCase().includes(search);
+          const matchRef = disp.ref && disp.ref.toLowerCase().includes(search);
+          const matchSerial = disp.serial && disp.serial.toLowerCase().includes(search);
+          const matchTech = disp.technician && disp.technician.toLowerCase().includes(search);
+          if (!matchDoc && !matchRef && !matchSerial && !matchTech) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      renderTable(filtered);
+    }
+
+    function renderTable(list) {
+      const tbody = document.getElementById('consolidatedTbody');
+      tbody.innerHTML = '';
+      document.getElementById('showingCount').innerText = `${list.length} registros`;
+
+      if (list.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="py-8 text-center text-outline">
+              <div class="flex flex-col items-center gap-2">
+                <span class="material-symbols-outlined text-[32px] text-outline">search_off</span>
+                <p>No se encontraron despachos con los filtros seleccionados.</p>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      list.forEach(disp => {
+        const isJohan = disp.technician === 'JOHAN';
+        const techBadge = isJohan
+          ? `<span class="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold font-mono bg-blue-100 text-blue-800 border border-blue-200">JOHAN</span>`
+          : `<span class="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold font-mono bg-emerald-100 text-emerald-800 border border-emerald-200">SANTIAGO</span>`;
+
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-surface-container-low/70 transition-colors';
+        tr.innerHTML = `
+          <td class="py-3 px-4 font-mono text-outline whitespace-nowrap">${escapeHtml(disp.date)}</td>
+          <td class="py-3 px-4 whitespace-nowrap">
+            <span class="font-mono font-bold text-secondary text-sm">${escapeHtml(disp.document)}</span>
+          </td>
+          <td class="py-3 px-4">
+            <div class="flex flex-col">
+              <span class="font-semibold text-on-surface font-mono">${escapeHtml(disp.ref)}</span>
+            </div>
+          </td>
+          <td class="py-3 px-4 whitespace-nowrap">
+            <span class="inline-block px-2 py-1 rounded bg-surface-container font-mono font-bold text-on-surface text-xs border border-surface-container-high">${escapeHtml(disp.serial)}</span>
+          </td>
+          <td class="py-3 px-4 text-center whitespace-nowrap">${techBadge}</td>
+          <td class="py-3 px-4 text-outline">${escapeHtml(disp.type || 'Línea Húmeda')}</td>
+          <td class="py-3 px-4 text-center whitespace-nowrap">
+            <button data-serial="${escapeHtml(disp.serial)}" onclick="copySerial(this)" class="p-1.5 rounded-lg hover:bg-surface-container text-outline hover:text-on-surface transition-colors" title="Copiar Serial">
+              <span class="material-symbols-outlined text-[18px]">content_copy</span>
+            </button>
+            <button onclick="confirmDeleteDispatch('${escapeHtml(disp.id)}')" class="p-1.5 rounded-lg hover:bg-red-50 text-outline hover:text-error transition-colors" title="Eliminar Registro de Salida">
+              <span class="material-symbols-outlined text-[18px]">delete</span>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function copySerial(btn) {
+      const text = btn.getAttribute('data-serial') || '';
+      navigator.clipboard?.writeText(text);
+      const icon = btn.querySelector('.material-symbols-outlined');
+      if (icon) {
+        const original = icon.textContent;
+        icon.textContent = 'done';
+        icon.classList.add('text-emerald-700');
+        setTimeout(() => {
+          icon.textContent = original;
+          icon.classList.remove('text-emerald-700');
+        }, 1500);
+      }
+    }
+
+    function exportConsolidatedExcel() {
+      const dispatches = WMSStore.getDispatches();
+      if (!dispatches || dispatches.length === 0) {
+        alert('No hay despachos en el consolidado para exportar.');
+        return;
+      }
+
+      if (typeof XLSX !== 'undefined') {
+        const rows = dispatches.map(d => ({
+          'FECHA Y HORA': d.date || '',
+          'DOCUMENTO': d.document || '',
+          'REFERENCIA': d.ref || '',
+          'SERIAL': d.serial || '',
+          'DESPACHADO POR': d.technician || '',
+          'FAMILIA / EQUIPO': d.type || ''
+        }));
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Consolidado_Salidas");
+        XLSX.writeFile(wb, `Consolidado_Salidas_LineaHumeda_${new Date().toISOString().split('T')[0]}.xlsx`);
+      } else {
+        exportConsolidatedCSV();
+      }
+    }
+
+    function exportConsolidatedCSV() {
+      const dispatches = WMSStore.getDispatches();
+      if (!dispatches || dispatches.length === 0) {
+        alert('No hay despachos en el consolidado para exportar.');
+        return;
+      }
+
+      let csv = '\uFEFF';
+      csv += 'Fecha;Documento;Item_Referencia;Serial;Despachado_Por;Tipo_Familia\n';
+
+      dispatches.forEach(d => {
+        const row = [
+          `"${d.date || ''}"`,
+          `"${d.document || ''}"`,
+          `"${d.ref || ''}"`,
+          `"${d.serial || ''}"`,
+          `"${d.technician || ''}"`,
+          `"${d.type || ''}"`
+        ];
+        csv += row.join(';') + '\n';
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Consolidado_Salidas_LineaHumeda_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function initConsolidadoView() {
+      const stats = WMSStore.getStats();
+      const allDispatches = WMSStore.getDispatches();
+      const prods = WMSStore.getProducts();
+
+      // KPIs
+      document.getElementById('kpiTotalDispatches').innerText = stats.totalDispatched;
+      document.getElementById('kpiJohanCount').innerText = stats.johanDispatches;
+      document.getElementById('kpiSantiagoCount').innerText = stats.santiagoDispatches;
+      document.getElementById('kpiTotalRefs').innerText = prods.length;
+
+      const totalDisp = stats.totalDispatched || 1;
+      const johanPct = Math.round((stats.johanDispatches / totalDisp) * 100);
+      const santiagoPct = Math.round((stats.santiagoDispatches / totalDisp) * 100);
+      document.getElementById('kpiJohanPct').innerText = `${johanPct}% del total`;
+      document.getElementById('kpiSantiagoPct').innerText = `${santiagoPct}% del total`;
+
+      // Badges en botones de filtro
+      document.getElementById('badgeFilterTodos').innerText = stats.totalDispatched;
+      document.getElementById('badgeFilterJohan').innerText = stats.johanDispatches;
+      document.getElementById('badgeFilterSantiago').innerText = stats.santiagoDispatches;
+
+      applyFilters();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initConsolidadoView();
+
+      const topSearch = document.getElementById('topSearchInput');
+      topSearch.addEventListener('input', (e) => {
+        document.getElementById('tableSearchInput').value = e.target.value;
+        applyFilters();
+      });
+    });
+  </script>
+</body>
+</html>

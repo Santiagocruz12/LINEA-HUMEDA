@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <meta content="web_dashboard" name="shell-type"/>
+  <title>Catálogo de Stock y Referencias - Línea Húmeda</title>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    @layer base {
+      html, body { margin: 0; padding: 0; }
+      body { overscroll-behavior: none; }
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #c6c6cd; border-radius: 9999px; }
+  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface": "#f8f9ff",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#eff4ff",
+            "surface-container": "#e5eeff",
+            "surface-container-high": "#dce9ff",
+            "on-surface": "#0b1c30",
+            "on-surface-variant": "#45464d",
+            "outline": "#76777d",
+            "outline-variant": "#c6c6cd",
+            "primary": "#000000",
+            "on-primary": "#ffffff",
+            "secondary": "#0051d5",
+            "error": "#ba1a1a",
+            "error-container": "#ffdad6"
+          },
+          fontFamily: {
+            "body": ["Hanken Grotesk", "sans-serif"],
+            "mono": ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased">
+  <!-- SIDEBAR -->
+  <aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-50 flex flex-col justify-between">
+    <div class="flex flex-col">
+      <a href="../dashboard_principal_de_inventario/code.html" class="h-16 px-6 flex items-center gap-3 hover:opacity-90 transition-opacity">
+        <div class="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center font-bold">
+          <span class="material-symbols-outlined text-[20px]">water_drop</span>
+        </div>
+        <span class="font-bold text-base tracking-tight text-on-surface">LÍNEA HÚMEDA</span>
+      </a>
+      <div class="px-4 py-2">
+        <div class="text-[10px] font-mono text-outline uppercase px-2 mb-1">Operaciones</div>
+        <nav class="flex flex-col gap-1">
+          <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors text-sm" href="../dashboard_principal_de_inventario/code.html">
+            <span class="material-symbols-outlined text-[20px]">grid_view</span>
+            <span>Dashboard</span>
+          </a>
+          <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors text-sm" href="../historial_de_entradas_y_salidas/code.html">
+            <span class="material-symbols-outlined text-[20px]">sync_alt</span>
+            <span>Movimientos &amp; Consolidado</span>
+          </a>
+          <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors text-sm" href="../registrar_salida_de_inventario/code.html">
+            <span class="material-symbols-outlined text-[20px]">output</span>
+            <span>Registrar Salida</span>
+          </a>
+          <a aria-current="page" class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors bg-primary text-on-primary font-semibold shadow-sm text-sm" href="code.html">
+            <span class="material-symbols-outlined text-[20px]">inventory_2</span>
+            <span>Catálogo de Stock</span>
+          </a>
+        </nav>
+      </div>
+      <div class="px-4 py-2">
+        <div class="text-[10px] font-mono text-outline uppercase px-2 mb-1">Gestión</div>
+        <nav class="flex flex-col gap-1">
+          <button onclick="openNewRefModal()" class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary hover:bg-surface-container transition-colors text-sm text-left w-full font-semibold">
+            <span class="material-symbols-outlined text-[20px]">add_box</span>
+            <span>+ Nueva Referencia</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+    <div class="p-4">
+      <div class="bg-surface-container-low rounded-xl p-3 flex flex-col gap-1 text-xs">
+        <div class="flex items-center justify-between">
+          <span class="font-mono text-[10px] text-outline uppercase">Estación</span>
+          <span class="h-2 w-2 rounded-full bg-secondary"></span>
+        </div>
+        <span class="font-semibold text-on-surface">Catálogo Maestro</span>
+        <span class="text-outline text-[11px]">79 Referencias Activas</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN WRAPPER -->
+  <div class="pl-64">
+    <!-- TOP HEADER -->
+    <header class="fixed top-0 left-64 right-0 h-16 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 px-6 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3 flex-1 max-w-xl">
+        <div class="relative w-full">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">search</span>
+          <input class="w-full h-10 pl-10 pr-4 bg-surface-container-lowest rounded-lg text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-secondary/40 shadow-sm font-mono" placeholder="Buscar por referencia, familia o proveedor..." type="text" id="topSearchInput"/>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-1.5 bg-surface-container-low px-3 py-1.5 rounded-lg text-xs font-semibold">
+          <span class="material-symbols-outlined text-outline text-[18px]">warehouse</span>
+          <span>Almacén General Central</span>
+        </div>
+        <div class="flex items-center gap-2 pl-2">
+          <div class="flex flex-col text-right hidden sm:flex">
+            <span class="text-xs font-semibold text-on-surface leading-tight">Santiago / Johan</span>
+            <span class="text-[10px] font-mono text-outline">Línea Húmeda</span>
+          </div>
+          <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold font-mono">
+            LH
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="w-full pt-16 bg-surface min-h-screen">
+      <div class="p-6 flex flex-col gap-6">
+
+        <!-- BANNER BÁSICO Y SOBRIO -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-container-lowest p-5 rounded-xl shadow-sm border border-[#e5eeff]">
+          <div class="flex flex-col gap-1">
+            <h1 class="text-2xl font-bold text-on-surface tracking-tight">Catálogo de Stock &amp; Referencias</h1>
+            <p class="text-xs text-outline font-mono">Control de existencias y seriales de Bombas, PTOs y Cilindros</p>
+          </div>
+          <div class="flex items-center gap-2.5 flex-wrap shrink-0">
+            <button onclick="openExcelImportModal()" class="inline-flex items-center gap-1.5 px-3.5 h-10 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold transition-colors shadow-sm active:scale-95">
+              <span class="material-symbols-outlined text-[18px]">table_view</span>
+              <span>Subir Base de Datos (Excel)</span>
+            </button>
+            <button onclick="openNewRefModal()" class="inline-flex items-center gap-1.5 px-3.5 h-10 rounded-lg bg-primary hover:bg-primary/80 text-white text-xs font-semibold transition-colors shadow-sm active:scale-95">
+              <span class="material-symbols-outlined text-[18px]">add_circle</span>
+              <span>+ Nueva Referencia</span>
+            </button>
+            <a href="../registrar_salida_de_inventario/code.html" class="inline-flex items-center gap-1.5 px-4 h-10 rounded-lg bg-error hover:bg-red-800 text-white text-xs font-semibold transition-colors shadow-sm">
+              <span class="material-symbols-outlined text-[18px]">output</span>
+              <span>Despachar Salida</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- 4 KPI CARDS ENFOCADAS EN LÍNEA HÚMEDA -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm border border-[#e5eeff] flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-xs font-mono uppercase text-outline font-semibold">Bombas Hidráulicas</span>
+                <div class="text-2xl font-bold text-on-surface mt-1" id="kpiBombas">--</div>
+              </div>
+              <div class="w-10 h-10 rounded-lg bg-blue-50 text-secondary flex items-center justify-center">
+                <span class="material-symbols-outlined text-[24px]">water_pump</span>
+              </div>
+            </div>
+            <span class="text-[11px] text-outline mt-2">Engranajes, Paletas y Pistones</span>
+          </div>
+
+          <div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm border border-[#e5eeff] flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-xs font-mono uppercase text-outline font-semibold">Tomas de Fuerza (PTO)</span>
+                <div class="text-2xl font-bold text-on-surface mt-1" id="kpiPTO">--</div>
+              </div>
+              <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+                <span class="material-symbols-outlined text-[24px]">settings_input_component</span>
+              </div>
+            </div>
+            <span class="text-[11px] text-outline mt-2">Chelsea, ZF, Fuller, Eaton, JAC</span>
+          </div>
+
+          <div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm border border-[#e5eeff] flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-xs font-mono uppercase text-outline font-semibold">Cilindros Telescópicos</span>
+                <div class="text-2xl font-bold text-on-surface mt-1" id="kpiCilindros">--</div>
+              </div>
+              <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                <span class="material-symbols-outlined text-[24px]">view_column</span>
+              </div>
+            </div>
+            <span class="text-[11px] text-outline mt-2">Volco y Telescópicos Pesados</span>
+          </div>
+
+          <div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm border border-[#e5eeff] flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-xs font-mono uppercase text-outline font-semibold">Seriales Disponibles</span>
+                <div class="text-2xl font-bold text-on-surface mt-1" id="kpiTotalSerials">--</div>
+              </div>
+              <div class="w-10 h-10 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center">
+                <span class="material-symbols-outlined text-[24px]">qr_code_2</span>
+              </div>
+            </div>
+            <span class="text-[11px] text-outline mt-2">Con verificación en Bodega</span>
+          </div>
+        </div>
+
+        <!-- FILTROS Y BÚSQUEDA -->
+        <div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm border border-[#e5eeff] flex flex-col md:flex-row items-center justify-between gap-3">
+          <div class="relative w-full md:w-96">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
+            <input id="searchInput" type="text" placeholder="Filtrar por referencia (ej: C102, ZF, ROSCA)..." class="w-full h-10 pl-9 pr-3 bg-surface-container-low rounded-lg font-mono text-xs text-on-surface placeholder:text-outline focus:outline-none focus:ring-1 focus:ring-secondary"/>
+          </div>
+          <div class="flex items-center gap-2 w-full md:w-auto">
+            <select id="filterCategory" class="h-10 px-3 bg-surface-container-low rounded-lg text-xs font-semibold text-on-surface focus:outline-none cursor-pointer">
+              <option value="">Todas las Familias</option>
+              <option value="Bomba">Bombas Hidráulicas</option>
+              <option value="Toma de Fuerza">Tomas de Fuerza (PTO)</option>
+              <option value="Cilindro">Cilindros Telescópicos</option>
+              <option value="Válvula">Válvulas &amp; Kits</option>
+              <option value="Winche">Winches de Arrastre</option>
+            </select>
+            <span id="filteredCount" class="text-xs font-mono text-outline shrink-0">79 referencias</span>
+          </div>
+        </div>
+
+        <!-- TABLA PRINCIPAL DE CATÁLOGO -->
+        <div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm border border-[#e5eeff] flex flex-col gap-3">
+          <div class="overflow-x-auto rounded-lg border border-surface-container">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-surface-container-low text-outline font-mono uppercase tracking-wider text-[11px]">
+                <tr>
+                  <th class="py-3 px-4 font-semibold">REFERENCIA DE LÍNEA HÚMEDA</th>
+                  <th class="py-3 px-4 font-semibold">FAMILIA / EQUIPO</th>
+                  <th class="py-3 px-4 font-semibold">PROVEEDOR / FABRICANTE</th>
+                  <th class="py-3 px-4 font-semibold">SERIALES EN BODEGA</th>
+                  <th class="py-3 px-4 font-semibold text-center">ESTADO</th>
+                  <th class="py-3 px-4 font-semibold text-center w-28">ACCIONES</th>
+                </tr>
+              </thead>
+              <tbody id="tableCatalogRows" class="divide-y divide-surface-container">
+                <!-- Se llena dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL: AGREGAR REFERENCIA Y PROVEEDOR -->
+  <div id="modalNewRef" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+    <div class="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-6 shadow-xl border border-surface-container flex flex-col gap-4">
+      <div class="flex items-center justify-between border-b border-surface-container pb-3">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-secondary text-[24px]">add_circle</span>
+          <h3 class="text-base font-bold text-on-surface">Agregar Nueva Referencia &amp; Proveedor</h3>
+        </div>
+        <button onclick="closeNewRefModal()" class="text-outline hover:text-on-surface p-1 rounded-lg">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <form id="formNewRef" class="flex flex-col gap-3">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-outline">Código / Referencia de Línea Húmeda</label>
+          <input id="newRefCode" type="text" placeholder="Ej: BOMBA&quot;ENG-P75-313-9110 o PTO-NEW-01" required class="h-10 px-3 bg-surface-container-low rounded-lg font-mono text-xs font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary/40"/>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-outline">Categoría de Equipo</label>
+          <select id="newRefType" class="h-10 px-3 bg-surface-container-low rounded-lg text-xs font-semibold text-on-surface focus:outline-none cursor-pointer">
+            <option value="Bomba Hidráulica (Engranajes)">Bomba Hidráulica (Engranajes)</option>
+            <option value="Bomba Hidráulica (Pistones)">Bomba Hidráulica (Pistones)</option>
+            <option value="Bomba Hidráulica (Paletas)">Bomba Hidráulica (Paletas)</option>
+            <option value="Toma de Fuerza (PTO)">Toma de Fuerza (PTO)</option>
+            <option value="Cilindro Telescópico Volco">Cilindro Telescópico Volco</option>
+            <option value="Válvula Neumática / Direccional">Válvula Neumática / Direccional</option>
+            <option value="Winche Hidráulico">Winche Hidráulico</option>
+            <option value="Kit Completo Línea Húmeda">Kit Completo Línea Húmeda</option>
+          </select>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-outline">Proveedor / Fabricante</label>
+          <input id="newRefSupplier" type="text" placeholder="Ej: Parker, HYVA, Chelsea, Bezares, Eaton..." class="h-10 px-3 bg-surface-container-low rounded-lg text-xs font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary/40"/>
+          <span class="text-[10px] text-outline font-mono">Puedes editar o enriquecer los proveedores en cualquier momento.</span>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-outline">Serial Inicial en Bodega (Opcional)</label>
+          <input id="newRefInitialSerial" type="text" placeholder="Ej: SN-LH-99201" class="h-10 px-3 bg-surface-container-low rounded-lg font-mono text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary/40"/>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-container">
+          <button type="button" onclick="closeNewRefModal()" class="px-4 py-2 rounded-lg text-xs font-semibold text-on-surface-variant hover:bg-surface-container transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" class="px-5 py-2 rounded-lg bg-primary hover:bg-primary/80 text-white text-xs font-semibold transition-colors shadow-sm">
+            Guardar en Catálogo
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: SUBIR BASE DE DATOS EXCEL -->
+  <div id="modalExcelImport" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-6 shadow-xl border border-surface-container flex flex-col gap-4">
+      <div class="flex items-center justify-between border-b border-surface-container pb-3">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-emerald-700 text-[24px]">table_view</span>
+          <h3 class="text-base font-bold text-on-surface">Subir Base de Datos Excel</h3>
+        </div>
+        <button onclick="closeExcelImportModal()" class="text-outline hover:text-on-surface p-1 rounded-lg">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <div class="flex flex-col gap-3 text-xs">
+        <p class="text-on-surface-variant">Carga masiva de existencias, códigos de referencia y seriales desde formato Excel (.xlsx, .xls o .csv).</p>
+
+        <!-- Zona Drag and Drop -->
+        <div id="excelDropZone" onclick="document.getElementById('excelFileInput').click()" class="border-2 border-dashed border-emerald-300 hover:border-emerald-600 bg-emerald-50/50 rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all">
+          <span class="material-symbols-outlined text-emerald-700 text-[36px]">cloud_upload</span>
+          <span class="font-bold text-on-surface">Haga clic o arrastre su archivo Excel aquí</span>
+          <span class="text-[11px] text-outline font-mono">Formatos soportados: .xlsx, .xls, .csv</span>
+          <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="processExcelFile(this.files[0])"/>
+        </div>
+
+        <div id="excelPreviewArea" class="hidden flex flex-col gap-2 p-3 bg-surface-container-low rounded-lg font-mono text-xs">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-emerald-800" id="excelFileName">archivo.xlsx</span>
+            <span class="font-bold text-secondary" id="excelRowCount">0 filas detectadas</span>
+          </div>
+          <div id="excelSamplePreview" class="text-[11px] text-outline max-h-24 overflow-y-auto"></div>
+        </div>
+
+        <div class="flex items-center justify-between pt-2 border-t border-surface-container">
+          <button type="button" onclick="downloadSampleExcel()" class="inline-flex items-center gap-1 text-emerald-700 hover:underline font-semibold text-xs">
+            <span class="material-symbols-outlined text-[16px]">file_download</span>
+            <span>Descargar Plantilla Ejemplo</span>
+          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="closeExcelImportModal()" class="px-4 py-2 rounded-lg text-xs font-semibold text-on-surface-variant hover:bg-surface-container">
+              Cancelar
+            </button>
+            <button type="button" id="btnConfirmExcelImport" onclick="confirmExcelImport()" disabled class="px-5 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+              Cargar al Inventario
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../wms_store.js"></script>
+  <script>
+    (function () {
+      const tableCatalogRows = document.getElementById('tableCatalogRows');
+      const searchInput = document.getElementById('searchInput');
+      const topSearchInput = document.getElementById('topSearchInput');
+      const filterCategory = document.getElementById('filterCategory');
+      const filteredCount = document.getElementById('filteredCount');
+
+      const kpiBombas = document.getElementById('kpiBombas');
+      const kpiPTO = document.getElementById('kpiPTO');
+      const kpiCilindros = document.getElementById('kpiCilindros');
+      const kpiTotalSerials = document.getElementById('kpiTotalSerials');
+
+      // Modal Excel Import
+      let parsedExcelRows = [];
+
+      window.openExcelImportModal = function() {
+        document.getElementById('modalExcelImport').classList.remove('hidden');
+        document.getElementById('modalExcelImport').classList.add('flex');
+      };
+
+      window.closeExcelImportModal = function() {
+        document.getElementById('modalExcelImport').classList.add('hidden');
+        document.getElementById('modalExcelImport').classList.remove('flex');
+        document.getElementById('excelFileInput').value = '';
+        document.getElementById('excelPreviewArea').classList.add('hidden');
+        document.getElementById('btnConfirmExcelImport').disabled = true;
+        parsedExcelRows = [];
+      };
+
+      window.processExcelFile = function(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheet];
+            const json = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+            if (json.length === 0) {
+              alert('El archivo no contiene filas legibles.');
+              return;
+            }
+
+            parsedExcelRows = json;
+            document.getElementById('excelFileName').textContent = file.name;
+            document.getElementById('excelRowCount').textContent = `${json.length} filas detectadas`;
+            document.getElementById('excelSamplePreview').innerHTML = `
+              <strong>Columnas detectadas:</strong> ${Object.keys(json[0]).join(', ')}<br/>
+              <strong>Ejemplo fila 1:</strong> ${JSON.stringify(json[0])}
+            `;
+            document.getElementById('excelPreviewArea').classList.remove('hidden');
+            document.getElementById('btnConfirmExcelImport').disabled = false;
+          } catch(err) {
+            alert('Error leyendo el archivo Excel: ' + err.message);
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      };
+
+      window.confirmExcelImport = function() {
+        if (parsedExcelRows.length === 0) return;
+        const res = WMSStore.importExcelData(parsedExcelRows);
+        closeExcelImportModal();
+        renderCatalog();
+        alert(`¡Base de datos importada con éxito! Catálogo activo con ${res.totalProducts} referencias.`);
+      };
+
+      window.downloadSampleExcel = function() {
+        const sample = [
+          { REFERENCIA: 'BOMBA"ENG-C102-25-LAS-ET', FAMILIA: 'Bomba Hidráulica (Engranajes)', PROVEEDOR: 'HYVA / Parker', EXISTENCIAS: 10, SERIAL: 'SN-C102-001' },
+          { REFERENCIA: 'PTO-ZF-01-ISO-TER', FAMILIA: 'Toma de Fuerza (PTO)', PROVEEDOR: 'Bezares / ZF', EXISTENCIAS: 5, SERIAL: 'SN-PTO-002' },
+          { REFERENCIA: 'CIL"TE-85-220-S85-5254-220-ROSCA-SHD', FAMILIA: 'Cilindro Telescópico Volco', PROVEEDOR: 'Hyva / Binotto', EXISTENCIAS: 3, SERIAL: 'SN-CIL-003' }
+        ];
+        const ws = XLSX.utils.json_to_sheet(sample);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Plantilla_Inventario");
+        XLSX.writeFile(wb, "Plantilla_Inventario_LineaHumeda.xlsx");
+      };
+
+      window.openNewRefModal = function () {
+        document.getElementById('modalNewRef').classList.remove('hidden');
+        document.getElementById('modalNewRef').classList.add('flex');
+        document.getElementById('newRefCode').focus();
+      };
+      window.closeNewRefModal = function () {
+        document.getElementById('modalNewRef').classList.add('hidden');
+        document.getElementById('modalNewRef').classList.remove('flex');
+        document.getElementById('formNewRef').reset();
+      };
+
+      function updateKPIs() {
+        const stats = WMSStore.getStats();
+        kpiBombas.textContent = stats.bombasCount;
+        kpiPTO.textContent = stats.ptosCount;
+        kpiCilindros.textContent = stats.cilindrosCount;
+        kpiTotalSerials.textContent = stats.totalStock;
+      }
+
+      function renderCatalog() {
+        const products = WMSStore.getProducts();
+        const serials = WMSStore.getSerials();
+        const query = (searchInput.value || topSearchInput.value || '').trim().toLowerCase();
+        const cat = filterCategory.value;
+
+        tableCatalogRows.innerHTML = '';
+
+        const filtered = products.filter(p => {
+          const matchQuery = !query || p.ref.toLowerCase().includes(query) || (p.supplier && p.supplier.toLowerCase().includes(query)) || p.type.toLowerCase().includes(query);
+          const matchCat = !cat || p.type.toLowerCase().includes(cat.toLowerCase());
+          return matchQuery && matchCat;
+        });
+
+        filteredCount.textContent = `${filtered.length} de ${products.length} referencias`;
+
+        if (filtered.length === 0) {
+          tableCatalogRows.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-outline">No se encontraron productos que coincidan con la búsqueda.</td></tr>`;
+          return;
+        }
+
+        filtered.forEach(p => {
+          const prodSerials = serials.filter(s => s.ref === p.ref);
+          const availableSerials = prodSerials.filter(s => s.status === 'Disponible');
+
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-surface-container-low transition-colors';
+          tr.innerHTML = `
+            <td class="py-3 px-4 font-mono font-bold text-on-surface text-xs">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-outline text-[16px]">precision_manufacturing</span>
+                <span>${p.ref}</span>
+              </div>
+            </td>
+            <td class="py-3 px-4 text-xs font-semibold text-on-surface-variant">
+              <span class="px-2 py-0.5 rounded bg-surface-container font-mono text-[10px] text-on-surface">${p.type}</span>
+            </td>
+            <td class="py-3 px-4 text-xs text-on-surface-variant font-medium">
+              <span class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-outline text-[14px]">store</span>
+                <span>${p.supplier || 'Por Asignar'}</span>
+              </span>
+            </td>
+            <td class="py-3 px-4 font-mono text-xs">
+              <div class="flex flex-col gap-1">
+                <span class="font-bold text-secondary">${availableSerials.length} en stock</span>
+                <span class="text-[10px] text-outline truncate max-w-xs" title="${availableSerials.map(s => s.serial).join(', ')}">
+                  ${availableSerials.length ? availableSerials.map(s => s.serial).slice(0, 2).join(', ') + (availableSerials.length > 2 ? '...' : '') : 'Sin seriales disponibles'}
+                </span>
+              </div>
+            </td>
+            <td class="py-3 px-4 text-center">
+              ${availableSerials.length > 0 
+                ? '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">Disponible</span>' 
+                : '<span class="px-2 py-0.5 rounded-full bg-red-100 text-error font-bold text-[10px]">Agotado</span>'}
+            </td>
+            <td class="py-3 px-4 text-center">
+              <a href="../registrar_salida_de_inventario/code.html" class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container hover:bg-error hover:text-white transition-colors text-[11px] font-semibold" title="Despachar este ítem">
+                <span class="material-symbols-outlined text-[14px]">output</span>
+                <span>Despachar</span>
+              </a>
+            </td>
+          `;
+          tableCatalogRows.appendChild(tr);
+        });
+
+        updateKPIs();
+      }
+
+      searchInput.addEventListener('input', () => {
+        topSearchInput.value = searchInput.value;
+        renderCatalog();
+      });
+
+      topSearchInput.addEventListener('input', () => {
+        searchInput.value = topSearchInput.value;
+        renderCatalog();
+      });
+
+      filterCategory.addEventListener('change', renderCatalog);
+
+      document.getElementById('formNewRef').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const code = document.getElementById('newRefCode').value;
+        const type = document.getElementById('newRefType').value;
+        const supplier = document.getElementById('newRefSupplier').value;
+        const initialSerial = document.getElementById('newRefInitialSerial').value;
+
+        WMSStore.addProduct(code, type, supplier, initialSerial);
+        closeNewRefModal();
+        renderCatalog();
+        alert(`Referencia ${code} guardada con éxito.`);
+      });
+
+      renderCatalog();
+    })();
+  </script>
+</body>
+</html>
